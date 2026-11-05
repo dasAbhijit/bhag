@@ -4,6 +4,7 @@ Split bills with friends and family. Amounts in ₹.
 
 - **Live app:** https://dasabhijit.github.io/bhag/
 - **User guide:** [docs/](docs/README.md)
+- **Requirements:** [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
 - **Design:** [docs/DESIGN.md](docs/DESIGN.md)
 - **Setup (Supabase, sign-in, repeating jobs):** [docs/admin/setup.md](docs/admin/setup.md)
 

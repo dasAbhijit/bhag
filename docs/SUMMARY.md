@@ -12,4 +12,5 @@
 ## For whoever runs the app
 
 * [Setup guide](admin/setup.md)
+* [Requirements](REQUIREMENTS.md)
 * [Design](DESIGN.md)

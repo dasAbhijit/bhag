@@ -87,6 +87,10 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 | Recurring | Schedules with next date, pause, resume, delete |
 | Account | Name, install instructions, sign out |
 
+## Status
+
+M0 to M7 are built. The money logic, the add-expense form and the full database migration are covered by automated tests (56 at the time of writing). Browser end-to-end tests against a live Supabase project are not included. The setup guide ends with a manual two-device check.
+
 ## Milestones
 
 | | Scope |

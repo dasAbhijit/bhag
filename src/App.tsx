@@ -1,18 +1,20 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { rememberNext, takeNext, useAuth } from './auth/auth'
 import { supabaseConfigured } from './lib/supabase'
-import Account from './pages/Account'
 import Dashboard from './pages/Dashboard'
-import ExpenseDetail from './pages/ExpenseDetail'
-import ExpenseForm from './pages/ExpenseForm'
-import Friends from './pages/Friends'
-import GroupPage from './pages/group/GroupPage'
-import Join from './pages/Join'
-import Recurring from './pages/Recurring'
 import Shell from './pages/Shell'
 import SignIn from './pages/SignIn'
 import { Spinner } from './ui/ui'
+
+// Everything except the home screen loads on demand, so the first screen appears quickly on a phone.
+const Account = lazy(() => import('./pages/Account'))
+const ExpenseDetail = lazy(() => import('./pages/ExpenseDetail'))
+const ExpenseForm = lazy(() => import('./pages/ExpenseForm'))
+const Friends = lazy(() => import('./pages/Friends'))
+const GroupPage = lazy(() => import('./pages/group/GroupPage'))
+const Join = lazy(() => import('./pages/Join'))
+const Recurring = lazy(() => import('./pages/Recurring'))
 
 export default function App() {
   const { user, loading } = useAuth()
@@ -28,7 +30,6 @@ export default function App() {
     const next = takeNext()
     if (next && next !== location.pathname) navigate(next, { replace: true })
     // Only when the user first appears.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   if (!supabaseConfigured) {
@@ -43,19 +44,21 @@ export default function App() {
   if (!user) return <SignIn />
 
   return (
-    <Routes>
-      <Route element={<Shell />}>
-        <Route index element={<Dashboard />} />
-        <Route path="friends" element={<Friends />} />
-        <Route path="account" element={<Account />} />
-        <Route path="join/:code" element={<Join />} />
-        <Route path="groups/:id" element={<GroupPage />} />
-        <Route path="groups/:id/recurring" element={<Recurring />} />
-        <Route path="groups/:id/expense/new" element={<ExpenseForm />} />
-        <Route path="groups/:id/expense/:eid" element={<ExpenseDetail />} />
-        <Route path="groups/:id/expense/:eid/edit" element={<ExpenseForm />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route index element={<Dashboard />} />
+          <Route path="friends" element={<Friends />} />
+          <Route path="account" element={<Account />} />
+          <Route path="join/:code" element={<Join />} />
+          <Route path="groups/:id" element={<GroupPage />} />
+          <Route path="groups/:id/recurring" element={<Recurring />} />
+          <Route path="groups/:id/expense/new" element={<ExpenseForm />} />
+          <Route path="groups/:id/expense/:eid" element={<ExpenseDetail />} />
+          <Route path="groups/:id/expense/:eid/edit" element={<ExpenseForm />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </Suspense>
   )
 }

@@ -71,7 +71,21 @@ Pure functions with no UI or network code, covered by unit and property tests.
 
 ## Screens
 
-Auth, Dashboard, Group (expenses, balances, settle up, members, activity, export), Expense (add, edit, detail), Friends, Recurring manager, Settings.
+Phone-first. On wide screens the same layout centres in a 760px column and the bottom tab bar becomes a top menu. Green means someone owes you, amber means you owe. Visual mockups of each screen are on the design page (see the link in the README).
+
+| Screen | What it shows |
+|---|---|
+| Sign in | Google, email magic link, or password |
+| Home | Total you are owed and owe, then groups and one-on-one tabs, each with your balance. `+ Group` and `+ Friend` |
+| Group, Expenses | Expenses and payments newest first, with "you lent" or "you owe" per row. `+ Add expense` |
+| Group, Balances | Net balance per person, then the settle-up payments (simplified when the group has it on), each with a Settle button |
+| Group, Activity | Every add, edit, delete, payment and comment with what changed. Deleted expenses can be restored |
+| Group, People | Members (including friends who have not joined), invite link with copy and share, simplify toggle, recurring, CSV export |
+| Add or edit expense | Description, amount, date, category, paid by (one or several people), split tabs Equal, Exact, %, Shares with a live "left to assign", repeat, receipt photos |
+| Expense detail | Who paid and who owes what, receipts, comments, edit and delete |
+| Friends | Net balance with each person across all shared groups, expandable by group |
+| Recurring | Schedules with next date, pause, resume, delete |
+| Account | Name, install instructions, sign out |
 
 ## Milestones
 

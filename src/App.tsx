@@ -15,6 +15,7 @@ const Friends = lazy(() => import('./pages/Friends'))
 const GroupPage = lazy(() => import('./pages/group/GroupPage'))
 const Join = lazy(() => import('./pages/Join'))
 const Recurring = lazy(() => import('./pages/Recurring'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 
 export default function App() {
   const { user, loading } = useAuth()
@@ -50,6 +51,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="friends" element={<Friends />} />
           <Route path="account" element={<Account />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="join/:code" element={<Join />} />
           <Route path="groups/:id" element={<GroupPage />} />
           <Route path="groups/:id/recurring" element={<Recurring />} />

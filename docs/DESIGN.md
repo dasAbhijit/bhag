@@ -78,7 +78,7 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 
 | Screen | What it shows |
 |---|---|
-| Sign in | Google, email magic link, or password |
+| Sign in | Google, email magic link, or password, with Forgot password |
 | Home | Total you are owed and owe, then groups and one-on-one tabs, each with your balance. `+ Group` and `+ Friend` |
 | Group, Expenses | Expenses and payments newest first, with "you lent" or "you owe" per row. `+ Add expense` |
 | Group, Balances | Net balance per person, then the settle-up payments (simplified when the group has it on), each with a Settle button |
@@ -88,7 +88,8 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 | Expense detail | Who paid and who owes what, receipts, comments, edit and delete |
 | Friends | Net balance with each person across all shared groups, expandable by group |
 | Recurring | Schedules with next date, pause, resume, delete |
-| Account | Name, invoice-scanning key and model, install instructions, sign out |
+| Account | Name, change password or email a reset link, invoice-scanning key and model, install instructions, sign out |
+| Reset password | Opened from the reset email. Choose a new password |
 
 ## Status
 

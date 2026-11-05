@@ -22,6 +22,7 @@ In **Authentication, then URL Configuration**:
 ## 3. Choose how people sign in
 
 - **Email link and password** work as soon as you finish step 2. Supabase's built-in email sender is limited to a few emails an hour. For a family group that is usually fine. For more, add your own SMTP provider under **Authentication, then Emails**.
+- **Password reset** sends an email with a link back to the app (`/reset-password`). It uses the same redirect URLs as step 2 and the same email limits as above. The link must be opened in the browser where it was requested.
 - **Password sign-up** asks people to confirm their email by default. To skip that, turn off **Confirm email** under **Authentication, then Providers, then Email**.
 - **Google:** under **Authentication, then Providers, then Google**, add a Google OAuth client ID and secret, and add the callback URL Supabase shows to that Google client.
 

@@ -4,6 +4,8 @@ import { loadProfileName, updateProfileName } from '../data/api'
 import {
   clearScanSettings, DEFAULT_MODEL, loadScanSettings, MODEL_CHOICES, saveScanSettings, testScanSettings,
 } from '../lib/scan'
+import { sendResetLink } from '../lib/password'
+import PasswordForm from '../ui/PasswordForm'
 import { useRun, useToast } from '../ui/toast'
 import { ErrorNote, Field } from '../ui/ui'
 
@@ -41,6 +43,8 @@ export default function Account() {
         </button>
       </form>
 
+      <PasswordCard email={user?.email ?? ''} />
+
       <ScanSettingsCard />
 
       <div className="card card-pad stack">
@@ -54,6 +58,56 @@ export default function Account() {
         Sign out
       </button>
     </main>
+  )
+}
+
+function PasswordCard({ email }: { email: string }) {
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function emailLink() {
+    setSending(true)
+    setError(null)
+    try {
+      await sendResetLink(email)
+      toast(`Reset link sent to ${email}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send the email')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="card card-pad stack">
+      <div>
+        <h2>Password</h2>
+        <p className="muted small">
+          Choose a new password. If you usually sign in with an email link or Google, this also lets you sign in with your email and a password.
+        </p>
+      </div>
+      {open ? (
+        <>
+          <PasswordForm
+            onDone={() => {
+              setOpen(false)
+              toast('Password changed')
+            }}
+          />
+          <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setOpen(false)}>Cancel</button>
+        </>
+      ) : (
+        <div className="actions">
+          <button className="btn" onClick={() => setOpen(true)}>Change password</button>
+          <button className="btn ghost" onClick={() => void emailLink()} disabled={sending || !email}>
+            {sending ? 'Sending…' : 'Email me a reset link'}
+          </button>
+        </div>
+      )}
+      <ErrorNote error={error} />
+    </div>
   )
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { appUrl, client } from '../lib/supabase'
+import { sendResetLink } from '../lib/password'
 import { googleEnabled } from '../lib/providers'
 import { ErrorNote, Field } from '../ui/ui'
 
@@ -13,7 +14,7 @@ export default function SignIn() {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
+  const [sent, setSent] = useState<false | 'signin' | 'reset'>(false)
   const [hasGoogle, setHasGoogle] = useState(false)
 
   useEffect(() => {
@@ -35,11 +36,11 @@ export default function SignIn() {
       if (mode === 'link') {
         const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: appUrl() } })
         if (error) throw error
-        setSent(true)
+        setSent('signin')
       } else if (creating) {
         const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: appUrl() } })
         if (error) throw error
-        if (!data.session) setSent(true) // email confirmation is switched on
+        if (!data.session) setSent('signin') // email confirmation is switched on
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -51,13 +52,31 @@ export default function SignIn() {
     }
   }
 
+  async function forgot() {
+    if (!email.trim()) return setError('Enter your email above, then tap Forgot password')
+    setBusy(true)
+    setError(null)
+    try {
+      await sendResetLink(email)
+      setSent('reset')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the email')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (sent) {
     return (
       <main className="auth">
         <h1>Bhag</h1>
         <div className="note info">
           <strong>Check your email.</strong>
-          <p>We sent a link to {email}. Open it on this device to finish signing in.</p>
+          {sent === 'reset' ? (
+            <p>If {email} has an account, we sent a link to choose a new password. Open it on this device.</p>
+          ) : (
+            <p>We sent a link to {email}. Open it on this device to finish signing in.</p>
+          )}
         </div>
         <button className="btn" onClick={() => setSent(false)}>
           Use a different email
@@ -100,7 +119,7 @@ export default function SignIn() {
         {mode === 'password' && (
           <Field label="Password" hint={creating ? 'At least 8 characters' : undefined}>
             <input
-              className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} required
+              className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={creating ? 8 : undefined} required
               autoComplete={creating ? 'new-password' : 'current-password'}
             />
           </Field>
@@ -110,9 +129,16 @@ export default function SignIn() {
           {mode === 'link' ? 'Email me a sign-in link' : creating ? 'Create account' : 'Sign in'}
         </button>
         {mode === 'password' && (
-          <button type="button" className="btn ghost" onClick={() => setCreating((c) => !c)}>
-            {creating ? 'I already have an account' : 'Create an account'}
-          </button>
+          <div className="actions" style={{ justifyContent: 'space-between' }}>
+            <button type="button" className="btn ghost" onClick={() => setCreating((c) => !c)}>
+              {creating ? 'I already have an account' : 'Create an account'}
+            </button>
+            {!creating && (
+              <button type="button" className="btn ghost" onClick={() => void forgot()} disabled={busy}>
+                Forgot password?
+              </button>
+            )}
+          </div>
         )}
       </form>
     </main>

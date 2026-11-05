@@ -7,7 +7,9 @@ import { netBalances } from '../core/balances'
  * Runs the real migration in an in-process Postgres (PGlite) with small stand-ins for Supabase's
  * `auth` and `storage` schemas, then checks the security rules and money rules as different users.
  */
-const MIGRATION = readFileSync(new URL('../../supabase/migrations/0001_init.sql', import.meta.url), 'utf8')
+const MIGRATION = ['0001_init.sql', '0002_items_split.sql']
+  .map((f) => readFileSync(new URL(`../../supabase/migrations/${f}`, import.meta.url), 'utf8'))
+  .join('\n')
 
 const ALICE = '00000000-0000-4000-8000-00000000000a'
 const BOB = '00000000-0000-4000-8000-00000000000b'
@@ -150,6 +152,22 @@ describe('expenses', () => {
       // Bob claimed the placeholder "Dev (guest)", so that is the name the group knows him by.
       expect(log[1].actor_name).toBe('Dev (guest)')
     })
+  })
+  it('saves an itemised expense and keeps the items for editing', async () => {
+    const items = [{ name: 'Dosa', amount_paise: 24000, members: [aliceM] }, { name: 'Lassi', amount_paise: 9000, members: [aliceM, guestM] }]
+    const id = await save(ALICE, payload({
+      title: 'Cafe Mocha', amount_paise: 36300, split_method: 'items',
+      split_input: { items, extra_paise: 3300 },
+      payers: [{ member_id: aliceM, paid_paise: 36300 }],
+      splits: [{ member_id: aliceM, owed_paise: 30030 }, { member_id: guestM, owed_paise: 6270 }],
+    }))
+    await as(BOB, async (q) => {
+      const e = await one<{ split_method: string; split_input: { items: unknown[]; extra_paise: number } }>(q, 'select split_method, split_input from public.expenses where id = $1', [id])
+      expect(e.split_method).toBe('items')
+      expect(e.split_input.items).toHaveLength(2)
+      expect(e.split_input.extra_paise).toBe(3300)
+    })
+    await as(ALICE, (q) => q.query('select public.delete_expense($1)', [id]))
   })
   it('database totals match the core ledger', async () => {
     await as(ALICE, async (q) => {

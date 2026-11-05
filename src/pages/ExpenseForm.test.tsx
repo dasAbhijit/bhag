@@ -21,7 +21,13 @@ const api = vi.hoisted(() => ({
   saveRecurring: vi.fn(async (_p: unknown) => 'new-recurring-id'),
   uploadReceipt: vi.fn(async () => {}),
 }))
+const scan = vi.hoisted(() => ({
+  loadScanSettings: vi.fn((): { apiKey: string; model: string } | null => ({ apiKey: 'k', model: 'm' })),
+  scanReceipt: vi.fn(),
+}))
 vi.mock('../data/api', () => api)
+vi.mock('../lib/scan', () => scan)
+vi.mock('../lib/image', () => ({ prepareReceipt: vi.fn(async () => ({ blob: new Blob(['x'], { type: 'image/jpeg' }), ext: 'jpg' })) }))
 vi.mock('../data/hooks', () => ({ useLedger: () => ({ views: [view], isLoading: false, error: null, userId: ME, friends: [], data }) }))
 
 import ExpenseForm from './ExpenseForm'
@@ -43,7 +49,10 @@ function renderForm() {
 const lastPayload = () => api.saveExpense.mock.calls.at(-1)![0] as ExpensePayload
 const save = () => screen.getByRole('button', { name: /^Save/ })
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  scan.loadScanSettings.mockReturnValue({ apiKey: 'k', model: 'm' })
+})
 afterEach(cleanup)
 
 async function fillBasics(user: ReturnType<typeof userEvent.setup>, title = 'Dinner', amount = '300') {
@@ -175,3 +184,105 @@ describe('Add expense form', () => {
     expect(within(document.body).getByText('Enter the amount in rupees')).toBeInTheDocument()
   })
 })
+
+describe('Itemised split and invoice scanning', () => {
+  const scanned = {
+    merchant: 'Cafe Mocha', date: '2026-11-02', category: 'food', currency: 'INR',
+    items: [{ name: 'Masala Dosa', amount_paise: 24000 }, { name: 'Lassi', amount_paise: 9000 }],
+    total_paise: 36300, extra_paise: 3300, warnings: [] as string[],
+  }
+  const scanInput = () => document.querySelector('input[type=file][accept="image/*"]') as HTMLInputElement
+  const photo = () => new File(['img'], 'bill.jpg', { type: 'image/jpeg' })
+
+  it('splits items among the people who had them, with charges in proportion', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await user.type(screen.getByLabelText('Description'), 'Cafe')
+    await user.click(screen.getByRole('button', { name: 'Items' }))
+    await user.type(screen.getByLabelText('Item 1 name'), 'Dosa')
+    await user.type(screen.getByLabelText('Item 1 amount'), '240')
+    const who = within(screen.getByRole('group', { name: 'Who had item 1' }))
+    await user.click(who.getByRole('button', { name: 'Asha' }))  // everyone starts selected
+    await user.click(who.getByRole('button', { name: 'Dev' }))
+    await user.click(screen.getByRole('button', { name: '+ Add item' }))
+    await user.type(screen.getByLabelText('Item 2 name'), 'Lassi')
+    await user.type(screen.getByLabelText('Item 2 amount'), '90')
+    await user.type(screen.getByLabelText(/^Tax, service charge and tip/), '33')
+    expect((screen.getByLabelText(/^Amount \(₹\)/) as HTMLInputElement).value).toBe('363.00')
+    await user.click(save())
+    await waitFor(() => expect(api.saveExpense).toHaveBeenCalled())
+    const p = lastPayload()
+    expect(p.split_method).toBe('items')
+    expect(p.amount_paise).toBe(36300)
+    // Meera: 240 + 30 of items, 27 of the 33 charge. Asha and Dev: 30 + 3 each.
+    expect(p.splits).toEqual(expect.arrayContaining([
+      { member_id: 'me', owed_paise: 29700 }, { member_id: 'a', owed_paise: 3300 }, { member_id: 'dev', owed_paise: 3300 },
+    ]))
+    expect(p.payers).toEqual([{ member_id: 'me', paid_paise: 36300 }])
+    const saved = p.split_input as { items: { name: string; members: string[] }[]; extra_paise: number }
+    expect(saved.extra_paise).toBe(3300)
+    expect(saved.items[0]).toMatchObject({ name: 'Dosa', members: ['me'] })
+  })
+
+  it('needs someone on every item', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await user.type(screen.getByLabelText('Description'), 'Cafe')
+    await user.click(screen.getByRole('button', { name: 'Items' }))
+    await user.type(screen.getByLabelText('Item 1 name'), 'Tea')
+    await user.type(screen.getByLabelText('Item 1 amount'), '50')
+    await user.click(within(screen.getByRole('group', { name: 'Who had item 1' })).getByRole('button', { name: 'None' }))
+    expect(save()).toBeDisabled()
+    expect(screen.getAllByText('Choose who had “Tea”').length).toBeGreaterThan(0)
+  })
+
+  it('scanning fills the whole form, keeps it editable, and attaches the photo', async () => {
+    scan.scanReceipt.mockResolvedValue(scanned)
+    const user = userEvent.setup()
+    renderForm()
+    await user.upload(scanInput(), photo())
+    expect(await screen.findByText(/Read from your invoice/)).toBeInTheDocument()
+    expect((screen.getByLabelText('Description') as HTMLInputElement).value).toBe('Cafe Mocha')
+    expect((screen.getByLabelText('Date') as HTMLInputElement).value).toBe('2026-11-02')
+    expect((screen.getByLabelText('Category') as HTMLSelectElement).value).toBe('food')
+    expect((screen.getByLabelText('Item 1 name') as HTMLInputElement).value).toBe('Masala Dosa')
+    expect((screen.getByLabelText('Item 2 amount') as HTMLInputElement).value).toBe('90.00')
+    expect((screen.getByLabelText(/^Amount \(₹\)/) as HTMLInputElement).value).toBe('363.00')
+    // Fix a misread price: the total follows.
+    const dosa = screen.getByLabelText('Item 1 amount')
+    await user.clear(dosa)
+    await user.type(dosa, '200')
+    expect((screen.getByLabelText(/^Amount \(₹\)/) as HTMLInputElement).value).toBe('323.00')
+    await user.click(save())
+    await waitFor(() => expect(api.saveExpense).toHaveBeenCalled())
+    expect(lastPayload()).toMatchObject({ title: 'Cafe Mocha', amount_paise: 32300, expense_date: '2026-11-02', category: 'food', split_method: 'items' })
+    await waitFor(() => expect(api.uploadReceipt).toHaveBeenCalledTimes(1))
+    expect(scan.scanReceipt).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows what went wrong when the scan fails, and leaves the form alone', async () => {
+    scan.scanReceipt.mockRejectedValue(new Error('Google did not accept that API key. Check it in Account.'))
+    const user = userEvent.setup()
+    renderForm()
+    await user.type(screen.getByLabelText('Description'), 'Keep me')
+    await user.upload(scanInput(), photo())
+    expect(await screen.findByText(/did not accept that API key/)).toBeInTheDocument()
+    expect((screen.getByLabelText('Description') as HTMLInputElement).value).toBe('Keep me')
+  })
+
+  it('passes along warnings from the invoice', async () => {
+    scan.scanReceipt.mockResolvedValue({ ...scanned, warnings: ['The invoice says USD.'] })
+    const user = userEvent.setup()
+    renderForm()
+    await user.upload(scanInput(), photo())
+    expect(await screen.findByText('The invoice says USD.')).toBeInTheDocument()
+  })
+
+  it('asks for a key when none is saved', async () => {
+    scan.loadScanSettings.mockReturnValue(null)
+    renderForm()
+    expect(document.querySelector('input[type=file][accept="image/*"]')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Account' })).toBeInTheDocument()
+  })
+})
+

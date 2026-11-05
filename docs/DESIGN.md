@@ -12,7 +12,8 @@ Bhag ("share" in Hindi) is a Splitwise-style app for splitting bills with friend
 | Client | React, TypeScript, Vite, installable PWA |
 | Backend | Supabase (Postgres, Auth, Realtime, Storage) |
 | Currency | INR only in v1, shown as ₹ with Indian digit grouping (12,34,567.89) |
-| Auth | Magic link and Google sign-in |
+| Auth | Magic link, password, and Google sign-in when enabled |
+| Invoice scanning | Google Gemini, each person's own key, stored on their device only |
 
 GitBook cannot run a web app, so it holds the documentation and links to the app.
 
@@ -47,6 +48,7 @@ Pure functions with no UI or network code, covered by unit and property tests.
    - Exact: amounts must sum to the total.
    - Percent: must sum to 100, cents assigned by largest remainder.
    - Shares: weights such as 2:1:1, resolved by largest remainder.
+   - Items: each line is divided equally among the people who had it. Tax, service and tip (one signed amount, negative for a discount) are shared in proportion to each person's item subtotal. The items are kept in `expenses.split_input` so the expense can be re-opened and edited.
 2. **Multiple payers.** Paid amounts must sum to the total. Net per person = paid − owed.
 3. **Balances.** Per group: sum of (paid − owed), adjusted by settlements.
 4. **Debt simplification.** Match the largest creditor with the largest debtor repeatedly. That yields at most n−1 payments. An exact subset-partition search runs for groups of about 12 or fewer. Finding the true minimum is NP-hard, so larger groups use the greedy result.
@@ -58,12 +60,13 @@ Pure functions with no UI or network code, covered by unit and property tests.
 
 | Feature | Approach |
 |---|---|
-| Split methods | Editor with Equal, Exact, %, Shares tabs and a live "remaining" indicator |
+| Split methods | Editor with Equal, Exact, %, Shares and Items tabs and a live "left to assign" indicator |
 | Debt simplification | Per-group toggle and a "who pays whom" settle-up screen |
 | Multiple payers | "Paid by" multi-select with an amount per payer |
 | Groups and friends | Unlimited groups plus auto-created 1-on-1 ledgers |
 | Recurring | "Repeat" option on an expense and a manage screen |
-| Receipts | Private Storage bucket, client-side compression, signed URLs, no OCR |
+| Receipts | Private Storage bucket, client-side compression, signed URLs |
+| Invoice scanning | Photo is read in the browser by Google Gemini with the person's own API key (kept in `localStorage`, set in Account). Fills the form and an itemised split. No server function needed |
 | Combined balances | Friends tab with net total and per-group breakdown |
 | Sync | Supabase Realtime subscriptions |
 | CSV export | Button on the group page |
@@ -81,11 +84,11 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 | Group, Balances | Net balance per person, then the settle-up payments (simplified when the group has it on), each with a Settle button |
 | Group, Activity | Every add, edit, delete, payment and comment with what changed. Deleted expenses can be restored |
 | Group, People | Members (including friends who have not joined), invite link with copy and share, simplify toggle, recurring, CSV export |
-| Add or edit expense | Description, amount, date, category, paid by (one or several people), split tabs Equal, Exact, %, Shares with a live "left to assign", repeat, receipt photos |
+| Add or edit expense | Description, amount, date, category, paid by (one or several people), split tabs Equal, Exact, %, Shares, Items with a live "left to assign", repeat, receipt photos, and a Scan invoice button that fills the form and the items |
 | Expense detail | Who paid and who owes what, receipts, comments, edit and delete |
 | Friends | Net balance with each person across all shared groups, expandable by group |
 | Recurring | Schedules with next date, pause, resume, delete |
-| Account | Name, install instructions, sign out |
+| Account | Name, invoice-scanning key and model, install instructions, sign out |
 
 ## Status
 
@@ -106,4 +109,4 @@ M0 to M7 are built. The money logic, the add-expense form and the full database 
 
 ## Out of scope for v1
 
-Multi-currency conversion, receipt OCR, payment integrations (UPI), push notifications, native apps.
+Multi-currency conversion, payment integrations (UPI), push notifications, native apps.

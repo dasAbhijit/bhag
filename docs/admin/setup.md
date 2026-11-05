@@ -8,6 +8,7 @@ The app is a static site on GitHub Pages. Its data lives in a Supabase project.
 
 1. Open the Supabase dashboard for your project, then **SQL Editor**.
 2. Paste the whole contents of [`supabase/migrations/0001_init.sql`](https://github.com/dasAbhijit/bhag/blob/main/supabase/migrations/0001_init.sql) and run it. It is safe to run again.
+3. Then do the same with [`0002_items_split.sql`](https://github.com/dasAbhijit/bhag/blob/main/supabase/migrations/0002_items_split.sql). It lets expenses be split by item. Run the numbered files in order; any later ones go the same way.
 
 This creates the tables, the security rules, the receipt storage bucket, live updates and the daily job for repeating expenses.
 
@@ -28,7 +29,11 @@ In **Authentication, then URL Configuration**:
 
 The migration schedules a daily job with `pg_cron` (about 05:35 India time). If `pg_cron` is not enabled, turn it on under **Database, then Extensions** and run the migration again. Without it, repeating expenses still post, but only when someone opens that group.
 
-## 5. App settings
+## 5. Invoice scanning (optional, per person)
+
+Nothing to set up on the server. Each person adds their own Google Gemini key in the app under **Account**. See [Scan an invoice](../scan-an-invoice.md).
+
+## 6. App settings
 
 The app reads two public values, set as **repository variables** in GitHub (Settings, then Secrets and variables, then Actions, then Variables):
 
@@ -37,7 +42,7 @@ The app reads two public values, set as **repository variables** in GitHub (Sett
 
 These are safe to expose. Row-Level Security decides what each signed-in person can see. **Never** put the `service_role` or secret key in the repository or in these variables.
 
-## 6. Check it works
+## 7. Check it works
 
 1. Sign in on two devices with two accounts.
 2. Create a group on one, join it from the invite link on the other.

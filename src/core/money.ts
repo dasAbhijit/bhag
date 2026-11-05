@@ -20,3 +20,11 @@ export function parseINR(input: string): Paise | null {
   const [r, f = ''] = s.split('.')
   return Number(r) * 100 + Number(f.padEnd(2, '0'))
 }
+
+/** Like parseINR but allows a leading minus, for discounts. "-50" -> -5000. */
+export function parseSignedINR(input: string): Paise | null {
+  const t = input.trim()
+  const neg = t.startsWith('-') || t.startsWith('−')
+  const p = parseINR(neg ? t.slice(1) : t)
+  return p === null ? null : neg ? -p : p
+}

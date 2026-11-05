@@ -206,3 +206,18 @@ textarea.input { min-height: 80px; resize: vertical; }
 @media (prefers-reduced-motion: no-preference) {
   .btn, .row { transition: background-color 0.12s; }
 }
+
+/* Itemised split */
+.item { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--surface); }
+.item-top { display: grid; grid-template-columns: 1fr 104px auto; gap: 8px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  font-size: 0.9rem; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.chip[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.chip.ghost { border-style: dashed; font-weight: 500; }
+.totals { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--line); padding-top: 8px; }
+.totals > div, .totals-line { display: flex; justify-content: space-between; gap: 12px; }
+.totals .grand { font-weight: 700; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+.btn.disabled { opacity: 0.6; pointer-events: none; }

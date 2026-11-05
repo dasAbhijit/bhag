@@ -30,7 +30,8 @@ export default function ExpenseDetail() {
   }
   const name = (m: string) => view.memberById.get(m)?.display_name ?? 'Someone'
   const deleted = Boolean(expense.deleted_at)
-  const method = { equal: 'equally', exact: 'by exact amounts', percent: 'by percentage', shares: 'by shares' }[expense.split_method]
+  const method = { equal: 'equally', exact: 'by exact amounts', percent: 'by percentage', shares: 'by shares', items: 'by item' }[expense.split_method]
+  const billItems = expense.split_method === 'items' ? (expense.split_input as { items?: { name: string; amount_paise: number; members: string[] }[]; extra_paise?: number } | null) : null
   const pct = (expense.split_input as { percents?: Record<string, number> } | null)?.percents
   const sh = (expense.split_input as { shares?: Record<string, number> } | null)?.shares
 
@@ -66,7 +67,30 @@ export default function ExpenseDetail() {
         </div>
       </div>
 
-      <div className="section-title"><h2>Split {method}</h2></div>
+      {billItems?.items && billItems.items.length > 0 && (
+        <>
+          <div className="section-title"><h2>Items</h2></div>
+          <ul className="card list">
+            {billItems.items.map((it, i) => (
+              <li key={i} className="row">
+                <div className="grow">
+                  <div className="title">{it.name || 'Item'}</div>
+                  <div className="muted small">{it.members.length === 0 ? 'Nobody' : it.members.length === view.members.length ? 'Everyone' : it.members.map(name).join(', ')}</div>
+                </div>
+                <Money paise={it.amount_paise} />
+              </li>
+            ))}
+            {billItems.extra_paise ? (
+              <li className="row">
+                <div className="grow muted">Tax, service and tip</div>
+                <Money paise={billItems.extra_paise} />
+              </li>
+            ) : null}
+          </ul>
+        </>
+      )}
+
+      <div className="section-title"><h2>{expense.split_method === 'items' ? 'Each person owes' : `Split ${method}`}</h2></div>
       <ul className="card list">
         {expense.expense_splits.map((s) => (
           <li key={s.member_id} className="row">

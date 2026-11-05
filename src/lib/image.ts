@@ -1,8 +1,8 @@
 const MAX_BYTES = 5 * 1024 * 1024
 const MAX_SIDE = 1600
 
-/** Shrink a photo before upload (long side 1600px, JPEG). PDFs pass through unchanged. */
-export async function prepareReceipt(file: File): Promise<{ blob: Blob; ext: string }> {
+/** Shrink a photo before upload (long side 1600px by default, JPEG). PDFs pass through unchanged. */
+export async function prepareReceipt(file: File, maxSide = MAX_SIDE): Promise<{ blob: Blob; ext: string }> {
   if (file.type === 'application/pdf') {
     if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 5 MB`)
     return { blob: file, ext: 'pdf' }
@@ -14,7 +14,7 @@ export async function prepareReceipt(file: File): Promise<{ blob: Blob; ext: str
   } catch {
     throw new Error(`Could not read ${file.name}. Try a JPEG or PNG photo.`)
   }
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)

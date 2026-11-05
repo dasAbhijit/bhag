@@ -14,6 +14,9 @@ By default it is you. Pick someone else from the list, or tick **Several people 
 | **Exact** | You know each person's amount. They must add up to the total. | Asha ₹2,000, Dev ₹1,200, you ₹800 |
 | **%** | Shares are given as percentages. They must add up to 100. | 50%, 30%, 20% gives ₹2,000, ₹1,200, ₹800 |
 | **Shares** | Proportions like 2:1:1. | 2, 1, 1 gives ₹2,000, ₹1,000, ₹1,000 |
+| **Items** | Different people had different things. List each item and tick who had it. Tax and tip are shared in proportion. | Dosa ₹240 (Meera), Lassi ₹90 (all 3), tax ₹33 gives Meera ₹297, the others ₹33 each |
+
+You can also [scan an invoice](scan-an-invoice.md) to fill in the items automatically.
 
 Amounts that do not divide evenly are rounded to the paisa, and the extra paise are handed out fairly so the total always matches exactly.
 

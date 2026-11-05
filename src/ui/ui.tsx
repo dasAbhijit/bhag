@@ -91,12 +91,7 @@ export function ErrorNote({ error }: { error: Error | string | null }) {
   )
 }
 
-export const CATEGORIES = [
-  ['general', 'General'], ['food', 'Food & drink'], ['groceries', 'Groceries'], ['rent', 'Rent'],
-  ['utilities', 'Utilities'], ['travel', 'Travel'], ['transport', 'Transport'], ['entertainment', 'Entertainment'],
-  ['subscriptions', 'Subscriptions'], ['shopping', 'Shopping'], ['health', 'Health'], ['other', 'Other'],
-] as const
-export const categoryLabel = (c: string) => CATEGORIES.find(([k]) => k === c)?.[1] ?? 'General'
+export { CATEGORIES, categoryLabel } from '../core/categories'
 
 export function fmtDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number)

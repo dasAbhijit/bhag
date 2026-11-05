@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatINR, parseINR } from './money'
+import { formatINR, parseINR, parseSignedINR } from './money'
 
 describe('money', () => {
   it('formats with rupee symbol and Indian grouping', () => {
@@ -12,5 +12,11 @@ describe('money', () => {
     expect(parseINR('10')).toBe(1000)
     expect(parseINR('1.234')).toBeNull()
     expect(parseINR('abc')).toBeNull()
+  })
+  it('parses discounts with a minus sign', () => {
+    expect(parseSignedINR('-50')).toBe(-5000)
+    expect(parseSignedINR('−12.5')).toBe(-1250)
+    expect(parseSignedINR('40')).toBe(4000)
+    expect(parseSignedINR('--5')).toBeNull()
   })
 })

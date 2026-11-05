@@ -41,9 +41,17 @@ export async function loadAll(): Promise<AllData> {
   return { groups, expenses, settlements, recurring }
 }
 
+/** Turn the odd database messages people could actually meet into something they can act on. */
+export function friendlyError(message: string): string {
+  if (message.includes('split_method_check')) {
+    return 'Splitting by item needs a database update. Ask whoever runs Bhag to run migration 0002 (see the setup guide).'
+  }
+  return message
+}
+
 async function rpc<T = unknown>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await client().rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(friendlyError(error.message))
   return data as T
 }
 

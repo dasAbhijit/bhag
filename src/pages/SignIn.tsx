@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { appUrl, client } from '../lib/supabase'
+import { googleEnabled } from '../lib/providers'
 import { ErrorNote, Field } from '../ui/ui'
 
 type Mode = 'link' | 'password'
@@ -13,6 +14,11 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [hasGoogle, setHasGoogle] = useState(false)
+
+  useEffect(() => {
+    void googleEnabled().then(setHasGoogle)
+  }, [])
 
   async function google() {
     setError(null)
@@ -66,10 +72,14 @@ export default function SignIn() {
         <h1>Bhag</h1>
         <p className="muted">Split bills with friends and family. Everything in ₹.</p>
       </div>
-      <button className="btn block" onClick={google}>
-        Continue with Google
-      </button>
-      <div className="divider">or use your email</div>
+      {hasGoogle && (
+        <>
+          <button className="btn block" onClick={google}>
+            Continue with Google
+          </button>
+          <div className="divider">or use your email</div>
+        </>
+      )}
       <div className="seg" role="group" aria-label="Sign-in method">
         <button type="button" aria-pressed={mode === 'link'} onClick={() => setMode('link')}>
           Email link

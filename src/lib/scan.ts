@@ -48,9 +48,15 @@ export function clearScanSettings(): void {
 }
 
 export class ScanError extends Error {
-  constructor(message: string) {
+  /** True when trying again (or another model) may well work: Google 5xx replies and dropped connections. */
+  readonly transient: boolean
+  /** Technical line for troubleshooting: status, model, photo size, time. Shown small under the message. */
+  readonly detail: string | undefined
+  constructor(message: string, opts: { transient?: boolean; detail?: string } = {}) {
     super(message)
     this.name = 'ScanError'
+    this.transient = opts.transient ?? false
+    this.detail = opts.detail
   }
 }
 
@@ -172,13 +178,26 @@ export function parseScanText(raw: string): ScanResult {
 
 type FetchFn = typeof fetch
 
+/** Used when the chosen model keeps failing with a Google-side error. Cheaper, and rarely as busy. */
+export const FALLBACK_MODEL = 'gemini-3.5-flash-lite'
+/** Waits before the 2nd and 3rd try of a model. */
+const RETRY_DELAYS_MS = [1200, 3000]
+
+interface GoogleErrorBody {
+  error?: { message?: string; status?: string }
+}
+
 function describeHttpError(status: number, body: unknown, model: string): string {
-  const msg = (body as { error?: { message?: string } } | null)?.error?.message
+  const err = (body as GoogleErrorBody | null)?.error
+  const msg = err?.message
   if (status === 400 && msg && /api key/i.test(msg)) return 'Google did not accept that API key. Check it in Account.'
   if (status === 401 || status === 403) return `Google refused the request${msg ? `: ${msg}` : ''}. Check that the key is valid and the Gemini API is enabled for it.`
   if (status === 404) return `Google does not know the model “${model}”. Choose another model in Account.`
   if (status === 429) return 'Google says the free limit for this key has been reached. Wait a bit and try again.'
-  if (status >= 500) return 'Google had a problem on its side. Try again in a moment.'
+  if (status >= 500) {
+    const why = [String(status), err?.status, msg ? msg.slice(0, 140) : ''].filter(Boolean).join(' · ')
+    return `Google had a problem on its side (${why}). Try again in a moment.`
+  }
   return msg ? `Google said: ${msg}` : `Google returned an error (${status}).`
 }
 
@@ -199,15 +218,19 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-export async function scanReceipt(image: Blob, settings: ScanSettings, fetchFn: FetchFn = fetch, timeoutMs = 90_000): Promise<ScanResult> {
-  const data = await blobToBase64(image)
+const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`
+
+/** One request to one model. Throws ScanError, marked transient when a retry is worthwhile. */
+async function scanOnce(image: Blob, data: string, apiKey: string, model: string, fetchFn: FetchFn, timeoutMs: number): Promise<ScanResult> {
+  const started = Date.now()
+  const base = `${model} · photo ${kb(image.size)}`
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   let res: Response
   try {
-    res = await fetchFn(`${BASE}/models/${encodeURIComponent(settings.model)}:generateContent`, {
+    res = await fetchFn(`${BASE}/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: PROMPT }, { inlineData: { mimeType: image.type || 'image/jpeg', data } }] }],
         generationConfig: { responseMimeType: 'application/json', temperature: 0 },
@@ -215,8 +238,9 @@ export async function scanReceipt(image: Blob, settings: ScanSettings, fetchFn: 
       signal: ctrl.signal,
     })
   } catch (e) {
-    if (e instanceof DOMException && e.name === 'AbortError') throw new ScanError('Reading the invoice took too long. Try again.')
-    throw new ScanError('Could not reach Google. Check your internet connection.')
+    const detail = `no reply · ${base} · ${Date.now() - started} ms`
+    if (e instanceof DOMException && e.name === 'AbortError') throw new ScanError('Reading the invoice took too long. Try again.', { detail })
+    throw new ScanError('Could not reach Google. Check your internet connection.', { transient: true, detail })
   } finally {
     clearTimeout(timer)
   }
@@ -224,14 +248,64 @@ export async function scanReceipt(image: Blob, settings: ScanSettings, fetchFn: 
   const body = (await readJson(res)) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[]
     promptFeedback?: { blockReason?: string }
-  } | null
-  if (!res.ok) throw new ScanError(describeHttpError(res.status, body, settings.model))
+  } & GoogleErrorBody | null
+  const detail = `HTTP ${res.status}${body?.error?.status ? ' ' + body.error.status : ''} · ${base} · ${Date.now() - started} ms`
+  if (!res.ok) throw new ScanError(describeHttpError(res.status, body, model), { transient: res.status >= 500, detail })
   const reply = body?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''
   if (!reply) {
-    if (body?.promptFeedback?.blockReason) throw new ScanError('Google blocked this image. Try a different photo.')
-    throw new ScanError('Google returned an empty reply. Try again.')
+    if (body?.promptFeedback?.blockReason) throw new ScanError('Google blocked this image. Try a different photo.', { detail })
+    throw new ScanError('Google returned an empty reply. Try again.', { transient: true, detail })
   }
-  return parseScanText(reply)
+  try {
+    return parseScanText(reply)
+  } catch (e) {
+    throw new ScanError(e instanceof Error ? e.message : 'Could not read the reply', { detail })
+  }
+}
+
+export interface ScanHooks {
+  /** Called when a try failed for a temporary reason and another is about to start. */
+  onStatus?: (message: string) => void
+  /** Replaceable so tests do not have to wait. */
+  sleep?: (ms: number) => Promise<void>
+}
+
+/**
+ * Read an invoice photo. Temporary Google-side errors (5xx) and dropped connections are retried
+ * on their own, then once more with a lighter model, and the result says when that happened.
+ * Errors that retrying cannot fix (bad key, quota, wrong model) are reported straight away.
+ */
+export async function scanReceipt(
+  image: Blob,
+  settings: ScanSettings,
+  fetchFn: FetchFn = fetch,
+  timeoutMs = 90_000,
+  hooks: ScanHooks = {},
+): Promise<ScanResult> {
+  const sleep = hooks.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+  const data = await blobToBase64(image)
+  const models = settings.model === FALLBACK_MODEL ? [settings.model] : [settings.model, FALLBACK_MODEL]
+  let last: ScanError | null = null
+
+  for (const [m, model] of models.entries()) {
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        const result = await scanOnce(image, data, settings.apiKey, model, fetchFn, timeoutMs)
+        if (m > 0) result.warnings.push(`Read with ${model} because ${settings.model} was busy. Check the items carefully.`)
+        return result
+      } catch (e) {
+        if (!(e instanceof ScanError) || !e.transient) throw e
+        last = e
+        if (attempt < RETRY_DELAYS_MS.length) {
+          hooks.onStatus?.('Google is busy, trying again…')
+          await sleep(RETRY_DELAYS_MS[attempt])
+        } else if (m < models.length - 1) {
+          hooks.onStatus?.(`Still busy, trying ${models[m + 1]}…`)
+        }
+      }
+    }
+  }
+  throw last ?? new ScanError('Could not read the invoice')
 }
 
 /** Checks that the key works and the model exists, without sending any photo. */

@@ -14,7 +14,7 @@ Bhag helps a small circle (the owner, friends and family) split shared bills in 
 
 | Mark | Meaning |
 |---|---|
-| **Auto** | Covered by automated tests that run in CI before every deploy (94 tests) |
+| **Auto** | Covered by automated tests that run in CI before every deploy (101 tests) |
 | **Live** | Checked by hand on the deployed site, https://dasabhijit.github.io/bhag/ |
 | **Fixture** | Checked by hand on the real screens with sample data, no backend |
 | **Open** | Built, but not yet checked end to end. Needs two real people, a real email, or a phone |
@@ -55,7 +55,7 @@ Bhag helps a small circle (the owner, friends and family) split shared bills in 
 | C5 | Split **by item**: list the items, tick who had each one, and share tax, service and tip in proportion to each person's items. A discount can be entered as a negative amount. The items stay saved and can be edited later | Auto. Live (one-person group). Open with several people live |
 | C6 | An expense can repeat every week, month or year. Month ends are handled. Repeats are posted automatically each day, or when someone opens the group if the daily job is not enabled. Repeats can be paused, resumed and deleted | Auto (database and date rules). Open live. The daily job is not confirmed enabled |
 | C7 | Attach photos or PDFs (up to 5 MB) to an expense as receipts. Photos are shrunk on the phone. Only group members can open them. They can be removed | Live (photo) |
-| C8 | **Scan an invoice.** Take or choose a photo and the shop, date, category, every item (with quantities) and the tax and charges are filled in, with the total matching the printed bill. The person checks and edits everything before saving. The photo is kept as the receipt. The person supplies their own Google Gemini key in Account, which stays on their device | Auto (parsing, errors, request format). Live (two dummy invoices, clean and tilted photo, matched exactly) |
+| C8 | **Scan an invoice.** Take or choose a photo and the shop, date, category, every item (with quantities) and the tax and charges are filled in, with the total matching the printed bill. The person checks and edits everything before saving. The photo is kept as the receipt. The person supplies their own Google Gemini key in Account, which stays on their device. Temporary Google errors are retried and then fall back to a lighter model, and any failure shows the real reason | Auto (parsing, errors, request format). Live (two dummy invoices, clean and tilted photo, matched exactly) |
 
 ### D. Balances and settling up
 

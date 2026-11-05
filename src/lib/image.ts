@@ -25,7 +25,7 @@ export async function prepareReceipt(file: File, maxSide = MAX_SIDE): Promise<{ 
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
   bitmap.close()
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.82))
-  if (!blob) throw new Error('Could not process the photo')
+  if (!blob || blob.size < 1500) throw new Error('Could not process the photo. Try taking it again in good light.')
   if (blob.size > MAX_BYTES) throw new Error(`${file.name} is still larger than 5 MB after shrinking`)
   return { blob, ext: 'jpg' }
 }

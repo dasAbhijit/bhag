@@ -88,7 +88,8 @@ Pure functions with no UI or network code, covered by unit and randomized tests.
 6. **Combined balances.** Per friend, add up the direct pairwise balances across all shared groups. These are not simplified, so they match each group page. People are matched across groups by their account.
 7. **Recurring expenses.** Occurrence *n* is the start date plus *n* weeks, months or years, counted from the start. A monthly bill on the 31st lands on the 28th/29th/30th in short months. The database and the app use the same rule. A daily job (`pg_cron`, about 05:35 India time) posts anything due. If cron is not enabled, due items are posted when someone opens the group.
 8. **CSV export.** Built in the browser: one row per expense or payment, one column per person (paid minus owed), and a total row.
-9. **Invoice scan parsing.** The model's reply is treated as untrusted. It is parsed defensively into paise, valid dates and known categories. Negative lines become discounts. The charges amount is *invoice total − items*, so the total always matches the printed bill, and a warning shows when items and stated charges disagree.
+9. **Invoice scan calls.** Temporary Google errors (5xx) and dropped connections are retried twice, then once more with the lighter model `gemini-3.5-flash-lite`, and the result says so. Errors that retrying cannot fix (bad key, quota, unknown model, blocked image) are shown at once. Every error carries a small troubleshooting line (status, model, photo size, time).
+10. **Invoice scan parsing.** The model's reply is treated as untrusted. It is parsed defensively into paise, valid dates and known categories. Negative lines become discounts. The charges amount is *invoice total − items*, so the total always matches the printed bill, and a warning shows when items and stated charges disagree.
 
 ## 6. Features
 
@@ -135,8 +136,8 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 | Money logic | Unit and randomized tests (split totals, itemised splits, balances agree with ledger, simplification settles everyone with no more than n−1 payments, recurrence, CSV) | 35 |
 | Database | The real migrations run in an in-memory Postgres (PGlite) with stand-ins for Supabase's auth and storage. Tests act as different users: members, strangers, anonymous | 18 |
 | Screens | Add-expense form (all split methods, several payers, repeat, items, scanning, error cases), sign-in and forgot password, password form | 23 |
-| Gemini client, password helpers, activity text | Faked Google and Supabase replies and errors | 18 |
-| **Total** | `npm test`, also run in CI before every deploy | **94** |
+| Gemini client, password helpers, activity text | Faked Google and Supabase replies and errors, including temporary errors, retries and the fallback model | 25 |
+| **Total** | `npm test`, also run in CI before every deploy | **101** |
 
 Also checked by hand: layout at a 390px phone width and desktop, light and dark, no horizontal overflow and no console errors, using fixture data. On the live site: sign-in screen, key test, scanning two dummy invoices (clean and tilted photo), saving, receipt upload, editing and the activity log.
 
@@ -144,6 +145,7 @@ Not covered by automated browser tests: anything needing two real signed-in peop
 
 ## 9. Known limits and risks
 
+- **Google busy errors.** New Gemini models sometimes answer "overloaded" (503). Retries and the fallback model reduce this but cannot remove it.
 - **Gemini API drift.** Google's docs now lead with a newer "Interactions" endpoint. The app uses the older `generateContent` call, which works today. The model name is changeable in Account.
 - **Scan accuracy** is good on clean and tilted printed bills. Handwritten, crumpled or very long receipts are untested. The person always reviews before saving.
 - **Free tier privacy.** On Google's free tier, what is sent for scanning may be used to improve its products. The app says so next to the key field.

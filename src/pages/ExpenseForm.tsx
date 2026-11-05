@@ -365,22 +365,28 @@ function FormInner({ view, editing }: { view: GroupView; editing?: Expense }) {
 /** The "Scan an invoice" card. Needs the person's own Gemini key from Account. */
 function ScanCard({ onResult }: { onResult: (r: ScanResult, photo: File) => void }) {
   const [state, setState] = useState<'idle' | 'reading'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState('')
+  const [error, setError] = useState<{ message: string; detail?: string } | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const settings = loadScanSettings()
 
   async function pick(file: File | undefined) {
     if (!file || !settings) return
     setError(null)
+    setStatus('')
     setState('reading')
     try {
       const { blob } = await prepareReceipt(file, 2000)
       if (blob.type === 'application/pdf') throw new Error('Scanning works on photos. Take a photo of the invoice instead of using a PDF.')
-      onResult(await scanReceipt(blob, settings), file)
+      onResult(await scanReceipt(blob, settings, undefined, undefined, { onStatus: setStatus }), file)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not read the invoice')
+      setError({
+        message: e instanceof Error ? e.message : 'Could not read the invoice',
+        detail: (e as { detail?: string } | null)?.detail,
+      })
     } finally {
       setState('idle')
+      setStatus('')
       if (input.current) input.current.value = ''
     }
   }
@@ -394,7 +400,7 @@ function ScanCard({ onResult }: { onResult: (r: ScanResult, photo: File) => void
       {settings ? (
         <>
           <label className={`btn primary ${state === 'reading' ? 'disabled' : ''}`} style={{ alignSelf: 'flex-start' }}>
-            {state === 'reading' ? 'Reading the invoice…' : '📷 Scan invoice'}
+            {state === 'reading' ? status || 'Reading the invoice…' : '📷 Scan invoice'}
             <input ref={input} className="sr" type="file" accept="image/*" disabled={state === 'reading'} onChange={(e) => void pick(e.target.files?.[0])} />
           </label>
           <p className="hint">The photo is sent to Google Gemini using your own key. It is also saved as the receipt.</p>
@@ -402,7 +408,8 @@ function ScanCard({ onResult }: { onResult: (r: ScanResult, photo: File) => void
       ) : (
         <p className="note small">To scan invoices, add your free Gemini API key in <Link to="/account">Account</Link>. It takes a minute.</p>
       )}
-      <ErrorNote error={error} />
+      <ErrorNote error={error?.message ?? null} />
+      {error?.detail && <p className="hint">Details for troubleshooting: {error.detail}</p>}
     </div>
   )
 }

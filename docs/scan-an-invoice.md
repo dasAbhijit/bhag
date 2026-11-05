@@ -30,6 +30,14 @@ The photo is saved with the expense as its receipt. The items stay saved too, so
 - If the items and the tax do not add up to the printed total, Bhag says so. Look for a missed or misread line.
 - Handwritten bills and crumpled thermal paper are the hardest. You can always fix things by hand.
 
+## If scanning fails
+
+- **"Google had a problem on its side" or "Google is busy".** Bhag already retries by itself, then tries a lighter model (Gemini 3.5 Flash-Lite) and tells you if it did. If it still fails, wait a minute and try again.
+- **"Google did not accept that API key".** The key on this device is wrong or was pasted with extra characters. Re-enter it in Account and tap **Test key**. The key is stored per device, so a new phone needs it added too.
+- **"Google says the free limit has been reached".** Wait, or use a key with more quota.
+- **"Could not read the photo".** Take it again in good light. Use a JPEG or PNG photo, not a PDF.
+- Under any scan error, a small **Details for troubleshooting** line shows the status, model, photo size and time. Include it if you ask for help.
+
 ## Privacy and limits
 
 - The photo is sent to Google when you scan. On Google's free tier, Google may use what you send to improve its products, so avoid scanning anything private. Check Google's current terms.

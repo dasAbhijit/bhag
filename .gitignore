@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .preview/
+
+# Bulk account lists and results hold emails and temporary passwords
+scripts/*.csv
+*-results.csv
+users.csv

@@ -68,6 +68,7 @@ activity_log(id, group_id, actor_user_id, actor_name, action, entity_type, entit
 - **Validation in the database:** payers and splits must be members of the group, have no duplicates, and each sum exactly to the amount.
 - **Invites:** a 20-character random code per group. Anyone with the link can join after signing in. **Make a new link** replaces it.
 - **Secrets:** only public values are in the repo or the build. The Gemini key is stored only in the person's browser and sent only to Google. It is never sent to Supabase or logged.
+- **Bulk accounts:** created through Supabase's admin API by a script the owner runs locally. The admin key is typed at a hidden prompt or read from an environment variable, is never stored or printed, and is refused unless it is a secret or `service_role` key. New-style `sb_secret_` keys go only in the `apikey` header. The results file holding temporary passwords is created readable only by the owner and is git-ignored.
 - **Spreadsheet export:** text cells that begin with `=`, `+`, `-` or `@` are prefixed so spreadsheets do not run them as formulas.
 
 ## 5. Core logic (`src/core`)
@@ -134,10 +135,11 @@ Phone-first. On wide screens the same layout centres in a 760px column and the b
 | Layer | How | Count |
 |---|---|---|
 | Money logic | Unit and randomized tests (split totals, itemised splits, balances agree with ledger, simplification settles everyone with no more than n−1 payments, recurrence, CSV) | 35 |
-| Database | The real migrations run in an in-memory Postgres (PGlite) with stand-ins for Supabase's auth and storage. Tests act as different users: members, strangers, anonymous | 18 |
+| Database | The real migrations run in an in-memory Postgres (PGlite) with stand-ins for Supabase's auth and storage. Tests act as different users: members, strangers, anonymous. Includes the bulk add-to-group SQL | 19 |
 | Screens | Add-expense form (all split methods, several payers, repeat, items, scanning, error cases), sign-in and forgot password, password form | 23 |
 | Gemini client, password helpers, activity text | Faked Google and Supabase replies and errors, including temporary errors, retries and the fallback model | 25 |
-| **Total** | `npm test`, also run in CI before every deploy | **101** |
+| Admin script | `scripts/bulk-add-users.mjs` run as a real command against a stand-in Supabase: request headers for both key kinds, results file and its permissions, failures, dry run, refusing the wrong key, confirmation | 11 |
+| **Total** | `npm test`, also run in CI before every deploy | **113** |
 
 Also checked by hand: layout at a 390px phone width and desktop, light and dark, no horizontal overflow and no console errors, using fixture data. On the live site: sign-in screen, key test, scanning two dummy invoices (clean and tilted photo), saving, receipt upload, editing and the activity log.
 

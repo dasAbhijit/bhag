@@ -14,7 +14,7 @@ Bhag helps a small circle (the owner, friends and family) split shared bills in 
 
 | Mark | Meaning |
 |---|---|
-| **Auto** | Covered by automated tests that run in CI before every deploy (101 tests) |
+| **Auto** | Covered by automated tests that run in CI before every deploy (113 tests) |
 | **Live** | Checked by hand on the deployed site, https://dasabhijit.github.io/bhag/ |
 | **Fixture** | Checked by hand on the real screens with sample data, no backend |
 | **Open** | Built, but not yet checked end to end. Needs two real people, a real email, or a phone |
@@ -32,6 +32,7 @@ Bhag helps a small circle (the owner, friends and family) split shared bills in 
 | A5 | A person who forgot their password can request a reset link from the sign-in screen, and choose a new password from the page it opens | Auto. Page loads on the live site. Open for the real email |
 | A6 | A person can set their display name and sign out | Live (Account page) |
 | A7 | A person can only see groups they belong to. Strangers and signed-out visitors see nothing | Auto (database tests as members, strangers and anonymous). Live (anonymous requests are refused) |
+| A8 | The owner can create many confirmed accounts at once from a list, with generated temporary passwords, without any app change or emails, and can add them to a group in bulk | Auto (the command run against a stand-in Supabase, and the group SQL on the real migration). Open: not yet run against the live project |
 
 ### B. Groups and people
 
@@ -106,6 +107,7 @@ Bhag helps a small circle (the owner, friends and family) split shared bills in 
 - Currency is rupees only.
 - Sign-in and reset links work only in the browser that asked for them.
 - Scanning needs an internet connection and a Gemini key from the person scanning. On Google's free tier, Google may use what is sent to improve its products.
+- Bulk account creation needs the owner's Supabase admin key, used only on the owner's own computer. See [Add many people at once](admin/bulk-users.md).
 - Database changes are applied by the owner by hand in the Supabase SQL editor, in numbered order (`0001`, then `0002`).
 
 ## 6. Out of scope

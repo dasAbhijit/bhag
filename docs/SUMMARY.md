@@ -12,5 +12,6 @@
 ## For whoever runs the app
 
 * [Setup guide](admin/setup.md)
+* [Add many people at once](admin/bulk-users.md)
 * [Requirements](REQUIREMENTS.md)
 * [Design](DESIGN.md)

@@ -43,7 +43,11 @@ The app reads two public values, set as **repository variables** in GitHub (Sett
 
 These are safe to expose. Row-Level Security decides what each signed-in person can see. **Never** put the `service_role` or secret key in the repository or in these variables.
 
-## 7. Check it works
+## 7. Add people
+
+People can sign up themselves, or you can create many accounts at once. See [Add many people at once](bulk-users.md).
+
+## 8. Check it works
 
 1. Sign in on two devices with two accounts.
 2. Create a group on one, join it from the invite link on the other.

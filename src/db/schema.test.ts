@@ -105,6 +105,23 @@ describe('groups and invites', () => {
     await expect(as(CAROL, (q) => q.query('select public.join_group($1, $2)', [code, guestM]))).rejects.toThrow(/already been claimed/)
     await expect(as(CAROL, (q) => q.query(`select public.join_group('nope')`))).rejects.toThrow(/not valid/)
   })
+  it('adds people to a group in bulk by email, as in the admin guide, and is safe to run twice', async () => {
+    await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values
+      ('00000000-0000-4000-8000-0000000000d1', 'dave@example.com', '{"full_name":"Dave Rao"}'),
+      ('00000000-0000-4000-8000-0000000000e1', 'erin@example.com', '{}')`)
+    const sql = `insert into public.group_members (group_id, user_id, display_name)
+      select '${gid}', u.id, coalesce(nullif(p.name, ''), split_part(u.email, '@', 1))
+      from auth.users u join public.profiles p on p.id = u.id
+      where u.email in ('dave@example.com', 'erin@example.com', 'alice@example.com')
+      on conflict do nothing`
+    await db.exec(sql)
+    await db.exec(sql)
+    const names = (await rows<{ display_name: string }>(db, 'select display_name from public.group_members where group_id = $1 order by display_name', [gid])).map((r) => r.display_name)
+    expect(names).toEqual(['Alice', 'Dave Rao', 'Dev (guest)', 'erin'])
+    // The new people can now see the group; a stranger still cannot.
+    await as('00000000-0000-4000-8000-0000000000d1', async (q) => expect(await rows(q, 'select id from public.groups where id = $1', [gid])).toHaveLength(1))
+    await as(CAROL, async (q) => expect(await rows(q, 'select id from public.groups where id = $1', [gid])).toHaveLength(0))
+  })
 })
 
 describe('expenses', () => {

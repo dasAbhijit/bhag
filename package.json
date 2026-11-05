@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "users:add": "node scripts/bulk-add-users.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",

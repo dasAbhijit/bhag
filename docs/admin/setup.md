@@ -23,7 +23,8 @@ In **Authentication, then URL Configuration**:
 
 - **Email link and password** work as soon as you finish step 2. Supabase's built-in email sender is limited to a few emails an hour. For a family group that is usually fine. For more, add your own SMTP provider under **Authentication, then Emails**.
 - **Password reset** sends an email with a link back to the app (`/reset-password`). It uses the same redirect URLs as step 2 and the same email limits as above. The link must be opened in the browser where it was requested.
-- **Password sign-up** asks people to confirm their email by default. To skip that, turn off **Confirm email** under **Authentication, then Providers, then Email**.
+- **Sign-up with no email at all (recommended for a family group):** the app opens on the Password tab, where people tap **Create an account** and are signed in at once. This only works if you turn off **Confirm email** under **Authentication, then Sign In / Providers, then Email**. While it is on, every sign-up sends an email and you will hit the sending limit. With it off, nothing is sent when people register. The trade-off is that nobody checks that an email address belongs to the person typing it, which is fine for a private group.
+- **If someone forgets their password** and email is rate-limited, you can set a new one in the Supabase dashboard under **Authentication, then Users**, then the person's row, then **Send password recovery** or **Update user**. No email is needed for **Update user**.
 - **Google:** under **Authentication, then Providers, then Google**, add a Google OAuth client ID and secret, and add the callback URL Supabase shows to that Google client.
 
 ## 4. Repeating expenses

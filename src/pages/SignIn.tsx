@@ -7,7 +7,7 @@ import { ErrorNote, Field } from '../ui/ui'
 type Mode = 'link' | 'password'
 
 export default function SignIn() {
-  const [mode, setMode] = useState<Mode>('link')
+  const [mode, setMode] = useState<Mode>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [creating, setCreating] = useState(false)
@@ -100,11 +100,11 @@ export default function SignIn() {
         </>
       )}
       <div className="seg" role="group" aria-label="Sign-in method">
-        <button type="button" aria-pressed={mode === 'link'} onClick={() => setMode('link')}>
-          Email link
-        </button>
         <button type="button" aria-pressed={mode === 'password'} onClick={() => setMode('password')}>
           Password
+        </button>
+        <button type="button" aria-pressed={mode === 'link'} onClick={() => setMode('link')}>
+          Email link
         </button>
       </div>
       <form className="stack" onSubmit={submit}>
@@ -124,6 +124,7 @@ export default function SignIn() {
             />
           </Field>
         )}
+        {mode === 'link' && <p className="muted">Needs an email to arrive, which can be slow. A password signs you in straight away.</p>}
         <ErrorNote error={error} />
         <button className="btn primary block" disabled={busy}>
           {mode === 'link' ? 'Email me a sign-in link' : creating ? 'Create account' : 'Sign in'}

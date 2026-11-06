@@ -5,10 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const h = vi.hoisted(() => ({
   signInWithPassword: vi.fn(async (_a: unknown): Promise<{ error: { message: string } | null }> => ({ error: null })),
+  signUp: vi.fn(async (_a: unknown): Promise<{ data: { session: object | null }; error: null }> => ({ data: { session: {} }, error: null })),
+  signInWithOtp: vi.fn(),
   sendResetLink: vi.fn(async (_e: string) => {}),
 }))
 vi.mock('../lib/supabase', () => ({
-  client: () => ({ auth: { signInWithPassword: h.signInWithPassword, signInWithOtp: vi.fn(), signUp: vi.fn(), signInWithOAuth: vi.fn() } }),
+  client: () => ({ auth: { signInWithPassword: h.signInWithPassword, signInWithOtp: h.signInWithOtp, signUp: h.signUp, signInWithOAuth: vi.fn() } }),
   appUrl: (p = '') => `https://app.test/bhag/${p}`,
 }))
 vi.mock('../lib/providers', () => ({ googleEnabled: async () => false }))
@@ -23,6 +25,40 @@ async function openPasswordMode(user: ReturnType<typeof userEvent.setup>) {
   render(<SignIn />)
   await user.click(screen.getByRole('button', { name: 'Password' }))
 }
+
+describe('Registration without email', () => {
+  it('opens on the password form, not the email link', () => {
+    render(<SignIn />)
+    expect(screen.getByRole('button', { name: 'Password' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+  })
+
+  it('creates an account and signs in with no email sent', async () => {
+    const user = userEvent.setup()
+    render(<SignIn />)
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
+    await user.type(screen.getByLabelText('Your name'), 'Meera Rao')
+    await user.type(screen.getByLabelText('Email'), 'meera@example.com')
+    await user.type(screen.getByLabelText(/Password/), 'longenough1')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+    await waitFor(() => expect(h.signUp).toHaveBeenCalled())
+    expect(h.signUp.mock.calls[0][0]).toMatchObject({ email: 'meera@example.com', password: 'longenough1', options: { data: { full_name: 'Meera Rao' } } })
+    expect(h.signInWithOtp).not.toHaveBeenCalled()
+    expect(screen.queryByText(/Check your email/)).toBeNull()
+  })
+
+  it('says to check email only if the project still requires confirmation', async () => {
+    h.signUp.mockResolvedValueOnce({ data: { session: null }, error: null })
+    const user = userEvent.setup()
+    render(<SignIn />)
+    await user.click(screen.getByRole('button', { name: 'Create an account' }))
+    await user.type(screen.getByLabelText('Your name'), 'Meera')
+    await user.type(screen.getByLabelText('Email'), 'meera@example.com')
+    await user.type(screen.getByLabelText(/Password/), 'longenough1')
+    await user.click(screen.getByRole('button', { name: 'Create account' }))
+    expect(await screen.findByText(/Check your email/)).toBeInTheDocument()
+  })
+})
 
 describe('Sign-in: forgot password', () => {
   it('asks for an email first', async () => {
